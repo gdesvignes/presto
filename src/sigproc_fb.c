@@ -119,6 +119,10 @@ void get_telescope_name(int telescope_id, struct spectra_info *s)
         strcpy(s->telescope, "LOFAR");
         s->beam_FWHM = default_beam;
         break;
+    case 12:
+        strcpy(s->telescope, "PicoVeleta");
+        s->beam_FWHM = default_beam;
+        break;
     default:
         strcpy(s->telescope, "Unknown");
         s->beam_FWHM = default_beam;

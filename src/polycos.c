@@ -129,6 +129,12 @@ char *make_polycos(char *parfilenm, infodata * idata, char *polycofilenm)
    } else if (strcmp(idata->telescope, "SRT") == 0) {
       scopechar = 'z';
       tracklen = 12;
+   } else if (strcmp(idata->telescope, "PicoVeleta") == 0) {
+	  scopechar = 'v';
+	  tracklen = 12;
+   } else if (strcmp(idata->telescope, "ALMA") == 0) {
+	 scopechar = 'm';
+	 tracklen = 12;
    } else if (strcmp(idata->telescope, "Geocenter") == 0) {
       scopechar = 'o';
       tracklen = 12;
