@@ -14,6 +14,7 @@ scopes = {'GBT':'1',
           'IRAM': 's',
           'LWA1': 'x',
           'LWA': 'x',
+          'VLA': 'c',
           'Geocenter': 'o'}
 
 scopes2 = {'GBT':'gbt',
@@ -22,6 +23,7 @@ scopes2 = {'GBT':'gbt',
           'GMRT': 'gmrt',
           'LWA1': 'lwa1',
           'LWA': 'lwa1',
+          'VLA': 'vla',
           'Geocenter': 'coe'}
 
 def measure_phase(profile, template, rotate_prof=True):
@@ -186,6 +188,14 @@ if __name__ == '__main__':
     timestep_sec = fold.T / numtoas
     timestep_day = timestep_sec / SECPERDAY
     fold.epoch = fold.epochi+fold.epochf
+
+    # If the requested number of TOAs doesn't divide into the
+    # number of time intervals, then exit
+    if fold_pfd.npart % numtoas:
+        sys.stderr.write(
+            "Error: # of TOAs (%d) doesn't divide # of time intervals (%d)!\n" % \
+            (numtoas, fold_pfd.npart))
+        sys.exit(2)
 
     # Over-ride the DM that was used during the fold
     if (DM!=0.0):

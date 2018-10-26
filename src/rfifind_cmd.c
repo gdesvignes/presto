@@ -30,14 +30,6 @@ static Cmdline cmd = {
   /* outfileP = */ 0,
   /* outfile = */ (char*)0,
   /* outfileC = */ 0,
-  /***** -pkmb: Raw data in Parkes Multibeam format */
-  /* pkmbP = */ 0,
-  /***** -gmrt: Raw data in GMRT Phased Array format */
-  /* gmrtP = */ 0,
-  /***** -bcpm: Raw data in Berkeley-Caltech Pulsar Machine (BPP) format */
-  /* bcpmP = */ 0,
-  /***** -spigot: Raw data in Caltech-NRAO Spigot Card format */
-  /* spigotP = */ 0,
   /***** -filterbank: Raw data in SIGPROC filterbank format */
   /* filterbankP = */ 0,
   /***** -psrfits: Raw data in PSRFITS format */
@@ -102,11 +94,11 @@ static Cmdline cmd = {
   /* inttrigfracP = */ 1,
   /* inttrigfrac = */ 0.3,
   /* inttrigfracC = */ 1,
-  /***** -zapchan: Comma separated string (no spaces!) of channels to explicitly remove from analysis (zero-offset).  Ranges are specified by min:max[:step] */
+  /***** -zapchan: Comma separated string (no spaces!) of channels to explicitly mask.  Ranges are specified by min:max[:step] */
   /* zapchanstrP = */ 0,
   /* zapchanstr = */ (char*)0,
   /* zapchanstrC = */ 0,
-  /***** -zapints: Comma separated string (no spaces!) of intervals to explicitly remove from analysis (zero-offset).  Ranges are specified by min:max[:step] */
+  /***** -zapints: Comma separated string (no spaces!) of intervals to explicitly mask.  Ranges are specified by min:max[:step] */
   /* zapintsstrP = */ 0,
   /* zapintsstr = */ (char*)0,
   /* zapintsstrC = */ 0,
@@ -114,6 +106,10 @@ static Cmdline cmd = {
   /* maskfileP = */ 0,
   /* maskfile = */ (char*)0,
   /* maskfileC = */ 0,
+  /***** -ignorechan: Comma separated string (no spaces!) of channels to ignore (or file containing such string).  Ranges are specified by min:max[:step] */
+  /* ignorechanstrP = */ 0,
+  /* ignorechanstr = */ (char*)0,
+  /* ignorechanstrC = */ 0,
   /***** uninterpreted rest of command line */
   /* argc = */ 0,
   /* argv = */ (char**)0,
@@ -849,34 +845,6 @@ showOptionValues(void)
     }
   }
 
-  /***** -pkmb: Raw data in Parkes Multibeam format */
-  if( !cmd.pkmbP ) {
-    printf("-pkmb not found.\n");
-  } else {
-    printf("-pkmb found:\n");
-  }
-
-  /***** -gmrt: Raw data in GMRT Phased Array format */
-  if( !cmd.gmrtP ) {
-    printf("-gmrt not found.\n");
-  } else {
-    printf("-gmrt found:\n");
-  }
-
-  /***** -bcpm: Raw data in Berkeley-Caltech Pulsar Machine (BPP) format */
-  if( !cmd.bcpmP ) {
-    printf("-bcpm not found.\n");
-  } else {
-    printf("-bcpm found:\n");
-  }
-
-  /***** -spigot: Raw data in Caltech-NRAO Spigot Card format */
-  if( !cmd.spigotP ) {
-    printf("-spigot not found.\n");
-  } else {
-    printf("-spigot found:\n");
-  }
-
   /***** -filterbank: Raw data in SIGPROC filterbank format */
   if( !cmd.filterbankP ) {
     printf("-filterbank not found.\n");
@@ -1083,7 +1051,7 @@ showOptionValues(void)
     }
   }
 
-  /***** -zapchan: Comma separated string (no spaces!) of channels to explicitly remove from analysis (zero-offset).  Ranges are specified by min:max[:step] */
+  /***** -zapchan: Comma separated string (no spaces!) of channels to explicitly mask.  Ranges are specified by min:max[:step] */
   if( !cmd.zapchanstrP ) {
     printf("-zapchan not found.\n");
   } else {
@@ -1095,7 +1063,7 @@ showOptionValues(void)
     }
   }
 
-  /***** -zapints: Comma separated string (no spaces!) of intervals to explicitly remove from analysis (zero-offset).  Ranges are specified by min:max[:step] */
+  /***** -zapints: Comma separated string (no spaces!) of intervals to explicitly mask.  Ranges are specified by min:max[:step] */
   if( !cmd.zapintsstrP ) {
     printf("-zapints not found.\n");
   } else {
@@ -1118,6 +1086,18 @@ showOptionValues(void)
       printf("  value = `%s'\n", cmd.maskfile);
     }
   }
+
+  /***** -ignorechan: Comma separated string (no spaces!) of channels to ignore (or file containing such string).  Ranges are specified by min:max[:step] */
+  if( !cmd.ignorechanstrP ) {
+    printf("-ignorechan not found.\n");
+  } else {
+    printf("-ignorechan found:\n");
+    if( !cmd.ignorechanstrC ) {
+      printf("  no values\n");
+    } else {
+      printf("  value = `%s'\n", cmd.ignorechanstr);
+    }
+  }
   if( !cmd.argc ) {
     printf("no remaining parameters in argv\n");
   } else {
@@ -1133,17 +1113,13 @@ showOptionValues(void)
 void
 usage(void)
 {
-  fprintf(stderr,"%s","   [-ncpus ncpus] -o outfile [-pkmb] [-gmrt] [-bcpm] [-spigot] [-filterbank] [-psrfits] [-noweights] [-noscales] [-nooffsets] [-wapp] [-window] [-numwapps numwapps] [-if ifs] [-clip clip] [-noclip] [-invert] [-zerodm] [-xwin] [-nocompute] [-rfixwin] [-rfips] [-time time] [-blocks blocks] [-timesig timesigma] [-freqsig freqsigma] [-chanfrac chantrigfrac] [-intfrac inttrigfrac] [-zapchan zapchanstr] [-zapints zapintsstr] [-mask maskfile] [--] infile ...\n");
+  fprintf(stderr,"%s","   [-ncpus ncpus] -o outfile [-filterbank] [-psrfits] [-noweights] [-noscales] [-nooffsets] [-wapp] [-window] [-numwapps numwapps] [-if ifs] [-clip clip] [-noclip] [-invert] [-zerodm] [-xwin] [-nocompute] [-rfixwin] [-rfips] [-time time] [-blocks blocks] [-timesig timesigma] [-freqsig freqsigma] [-chanfrac chantrigfrac] [-intfrac inttrigfrac] [-zapchan zapchanstr] [-zapints zapintsstr] [-mask maskfile] [-ignorechan ignorechanstr] [--] infile ...\n");
   fprintf(stderr,"%s","      Examines radio data for narrow and wide band interference as well as problems with channels\n");
   fprintf(stderr,"%s","         -ncpus: Number of processors to use with OpenMP\n");
   fprintf(stderr,"%s","                 1 int value between 1 and oo\n");
   fprintf(stderr,"%s","                 default: `1'\n");
   fprintf(stderr,"%s","             -o: Root of the output file names\n");
   fprintf(stderr,"%s","                 1 char* value\n");
-  fprintf(stderr,"%s","          -pkmb: Raw data in Parkes Multibeam format\n");
-  fprintf(stderr,"%s","          -gmrt: Raw data in GMRT Phased Array format\n");
-  fprintf(stderr,"%s","          -bcpm: Raw data in Berkeley-Caltech Pulsar Machine (BPP) format\n");
-  fprintf(stderr,"%s","        -spigot: Raw data in Caltech-NRAO Spigot Card format\n");
   fprintf(stderr,"%s","    -filterbank: Raw data in SIGPROC filterbank format\n");
   fprintf(stderr,"%s","       -psrfits: Raw data in PSRFITS format\n");
   fprintf(stderr,"%s","     -noweights: Do not apply PSRFITS weights\n");
@@ -1183,15 +1159,17 @@ usage(void)
   fprintf(stderr,"%s","       -intfrac: The fraction of bad intervals that will mask a full channel\n");
   fprintf(stderr,"%s","                 1 float value between 0.0 and 1.0\n");
   fprintf(stderr,"%s","                 default: `0.3'\n");
-  fprintf(stderr,"%s","       -zapchan: Comma separated string (no spaces!) of channels to explicitly remove from analysis (zero-offset).  Ranges are specified by min:max[:step]\n");
+  fprintf(stderr,"%s","       -zapchan: Comma separated string (no spaces!) of channels to explicitly mask.  Ranges are specified by min:max[:step]\n");
   fprintf(stderr,"%s","                 1 char* value\n");
-  fprintf(stderr,"%s","       -zapints: Comma separated string (no spaces!) of intervals to explicitly remove from analysis (zero-offset).  Ranges are specified by min:max[:step]\n");
+  fprintf(stderr,"%s","       -zapints: Comma separated string (no spaces!) of intervals to explicitly mask.  Ranges are specified by min:max[:step]\n");
   fprintf(stderr,"%s","                 1 char* value\n");
   fprintf(stderr,"%s","          -mask: File containing masking information to use\n");
   fprintf(stderr,"%s","                 1 char* value\n");
+  fprintf(stderr,"%s","    -ignorechan: Comma separated string (no spaces!) of channels to ignore (or file containing such string).  Ranges are specified by min:max[:step]\n");
+  fprintf(stderr,"%s","                 1 char* value\n");
   fprintf(stderr,"%s","         infile: Input data file name(s).\n");
   fprintf(stderr,"%s","                 1...16384 values\n");
-  fprintf(stderr,"%s","  version: 17Mar15\n");
+  fprintf(stderr,"%s","  version: 28Jun17\n");
   fprintf(stderr,"%s","  ");
   exit(EXIT_FAILURE);
 }
@@ -1224,26 +1202,6 @@ parseCmdline(int argc, char **argv)
       cmd.outfileP = 1;
       i = getStringOpt(argc, argv, i, &cmd.outfile, 1);
       cmd.outfileC = i-keep;
-      continue;
-    }
-
-    if( 0==strcmp("-pkmb", argv[i]) ) {
-      cmd.pkmbP = 1;
-      continue;
-    }
-
-    if( 0==strcmp("-gmrt", argv[i]) ) {
-      cmd.gmrtP = 1;
-      continue;
-    }
-
-    if( 0==strcmp("-bcpm", argv[i]) ) {
-      cmd.bcpmP = 1;
-      continue;
-    }
-
-    if( 0==strcmp("-spigot", argv[i]) ) {
-      cmd.spigotP = 1;
       continue;
     }
 
@@ -1424,6 +1382,14 @@ parseCmdline(int argc, char **argv)
       cmd.maskfileP = 1;
       i = getStringOpt(argc, argv, i, &cmd.maskfile, 1);
       cmd.maskfileC = i-keep;
+      continue;
+    }
+
+    if( 0==strcmp("-ignorechan", argv[i]) ) {
+      int keep = i;
+      cmd.ignorechanstrP = 1;
+      i = getStringOpt(argc, argv, i, &cmd.ignorechanstr, 1);
+      cmd.ignorechanstrC = i-keep;
       continue;
     }
 

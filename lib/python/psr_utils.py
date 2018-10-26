@@ -1,7 +1,6 @@
 import numpy as Num
 import numpy.fft as FFT
 import Pgplot, ppgplot, bisect, sinc_interp, parfile
-from scipy.stats import histogram
 from scipy.special import ndtr, ndtri, chdtrc, chdtri, fdtr, i0, kolmogorov
 from scipy.optimize import leastsq
 import scipy.optimize.zeros as zeros
@@ -30,6 +29,16 @@ def distance(width):
     x = Num.resize(x, (width,width))
     return Num.sqrt(x + Num.transpose(x))
 
+def is_power_of_10(n):
+    """
+    is_power_of_10(n):
+        If n is a power of 10, return True.
+    """
+    N = int(n)
+    while (N > 9 and N % 10 == 0):
+        N //= 10
+    return N == 1
+
 def choose_N(orig_N):
     """
     choose_N(orig_N):
@@ -39,20 +48,20 @@ def choose_N(orig_N):
             by at least the maximum downsample factor * 2.
             Currently, this is 8 * 2 = 16.
     """
-    # A list of 4-digit numbers that are highly factorable by small primes
-    goodfactors = [1008, 1024, 1056, 1120, 1152, 1200, 1232, 1280, 1296,
-                   1344, 1408, 1440, 1536, 1568, 1584, 1600, 1680, 1728,
-                   1760, 1792, 1920, 1936, 2000, 2016, 2048, 2112, 2160,
-                   2240, 2304, 2352, 2400, 2464, 2560, 2592, 2640, 2688,
-                   2800, 2816, 2880, 3024, 3072, 3136, 3168, 3200, 3360,
-                   3456, 3520, 3584, 3600, 3696, 3840, 3872, 3888, 3920,
-                   4000, 4032, 4096, 4224, 4320, 4400, 4480, 4608, 4704,
-                   4752, 4800, 4928, 5040, 5120, 5184, 5280, 5376, 5488,
-                   5600, 5632, 5760, 5808, 6000, 6048, 6144, 6160, 6272,
-                   6336, 6400, 6480, 6720, 6912, 7040, 7056, 7168, 7200,
-                   7392, 7680, 7744, 7776, 7840, 7920, 8000, 8064, 8192,
-                   8400, 8448, 8624, 8640, 8800, 8960, 9072, 9216, 9408,
-                   9504, 9600, 9680, 9856]
+    # A list of 4-dgit numbers that are highly factorable by small primes
+    goodfactors = [1000, 1008, 1024, 1056, 1120, 1152, 1200, 1232, 1280,
+                   1296, 1344, 1408, 1440, 1536, 1568, 1584, 1600, 1680,
+                   1728, 1760, 1792, 1920, 1936, 2000, 2016, 2048, 2112,
+                   2160, 2240, 2304, 2352, 2400, 2464, 2560, 2592, 2640,
+                   2688, 2800, 2816, 2880, 3024, 3072, 3136, 3168, 3200,
+                   3360, 3456, 3520, 3584, 3600, 3696, 3840, 3872, 3888,
+                   3920, 4000, 4032, 4096, 4224, 4320, 4400, 4480, 4608,
+                   4704, 4752, 4800, 4928, 5040, 5120, 5184, 5280, 5376,
+                   5488, 5600, 5632, 5760, 5808, 6000, 6048, 6144, 6160,
+                   6272, 6336, 6400, 6480, 6720, 6912, 7040, 7056, 7168,
+                   7200, 7392, 7680, 7744, 7776, 7840, 7920, 8000, 8064,
+                   8192, 8400, 8448, 8624, 8640, 8800, 8960, 9072, 9216,
+                   9408, 9504, 9600, 9680, 9856, 10000]
     if orig_N < 10000:
         return 0
     # Get the number represented by the first 4 digits of orig_N
@@ -60,17 +69,21 @@ def choose_N(orig_N):
     # Now get the number that is just bigger than orig_N
     # that has its first 4 digits equal to "factor"
     for factor in goodfactors:
+        if (factor == first4 and
+            orig_N % factor == 0 and
+            is_power_of_10(orig_N//factor)): break
         if factor > first4: break
     new_N = factor
     while new_N < orig_N:
         new_N *= 10
+    if new_N == orig_N:
+        return orig_N
     # Finally, compare new_N to the closest power_of_two
     # greater than orig_N.  Take the closest.
     two_N = 2
     while two_N < orig_N:
         two_N *= 2
-    if two_N < new_N: return two_N
-    else: return new_N
+    return min(two_N, new_N)
 
 def running_avg(arr, navg):
     """
@@ -95,7 +108,7 @@ def hist(data, bins, range=None, laby="Number", **kwargs):
                data values are used to define the interval.
     Note:  This command also accepts all the keyword arge of plotbinned().
     """
-    (ys, lox, dx, out) = histogram(data, bins, range)
+    (ys, lox, dx, out) = Num.histogram(data, bins, range)
     xs = Num.arange(bins, dtype='d')*dx + lox + 0.5*dx
     maxy = int(1.1*max(ys))
     if maxy < max(ys):
@@ -124,6 +137,66 @@ def KS_test(data, cumdist, output=0):
         print "Prob the data is from the specified distrbution   (P) = %.3g" % P
     return (D, P)
 
+def weighted_mean(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
+    """
+    NAME:
+      weighted_mean()
+
+    PURPOSE:
+      Calculate the weighted mean, error, and optionally standard deviation of
+      an input array.  By default error is calculated assuming the weights are
+      1/err^2, but if you send calcerr=True this assumption is dropped and the
+      error is determined from the weighted scatter.
+
+    CALLING SEQUENCE:
+     wmean,werr = wmom(arr, weights, inputmean=None, calcerr=False, sdev=False)
+
+    INPUTS:
+      arr: A numpy array or a sequence that can be converted.
+      weights: A set of weights for each elements in array.
+    OPTIONAL INPUTS:
+      inputmean:
+          An input mean value, around which the mean is calculated.
+      calcerr=False:
+          Calculate the weighted error.  By default the error is calculated as
+          1/sqrt( weights.sum() ).  If calcerr=True it is calculated as sqrt(
+          (w**2 * (arr-mean)**2).sum() )/weights.sum()
+      sdev=False:
+          If True, also return the weighted standard deviation as a third
+          element in the tuple.
+
+    OUTPUTS:
+      wmean, werr: A tuple of the weighted mean and error. If sdev=True the
+         tuple will also contain sdev: wmean,werr,wsdev
+
+    REVISION HISTORY:
+      Converted from IDL: 2006-10-23. Erin Sheldon, NYU
+
+   """
+    # no copy made if they are already arrays
+    arr = Num.array(arrin, ndmin=1, copy=False)
+    # Weights is forced to be type double. All resulting calculations
+    # will also be double
+    weights = Num.array(weights_in, ndmin=1, dtype='f8', copy=False)
+    wtot = weights.sum()
+    # user has input a mean value
+    if inputmean is None:
+        wmean = ( weights*arr ).sum()/wtot
+    else:
+        wmean=float(inputmean)
+    # how should error be calculated?
+    if calcerr:
+        werr2 = ( weights**2 * (arr-wmean)**2 ).sum()
+        werr = Num.sqrt( werr2 )/wtot
+    else:
+        werr = 1.0/Num.sqrt(wtot)
+    # should output include the weighted standard deviation?
+    if sdev:
+        wvar = ( weights*(arr-wmean)**2 ).sum()/wtot
+        wsdev = Num.sqrt(wvar)
+        return wmean,werr,wsdev
+    else:
+        return wmean,werr
 
 def MJD_to_JD(MJD):
     """
@@ -528,6 +601,56 @@ def shklovskii_effect(pm, D):
         or equivalently, Pdot_pm/P.
     """
     return (pm/1000.0*ARCSECTORAD/SECPERJULYR)**2.0 * KMPERKPC*D / (C/1000.0)
+
+def galactic_accel_simple(l, b, D, v_o=240.0, R_o = 8.34):
+    """
+    galactic_accel_simple(l, b, D, v_o=240.0, R_o = 8.34):
+        Return the approximate projected acceleration/c (in s^-1)
+        (a_p - a_ssb) dot n / c, where a_p and a_ssb are acceleration
+        vectors, and n is the los vector.  This assumes a simple spherically
+        symmetric isothermal sphere with v_o = 220 km/s circular velocity
+        and R_o = 8 kpc to the center of the sphere from the SSB.  l and
+        b are the galactic longitude and latitude (in deg) respectively,
+        and D is the distance in kpc.  This is eqn 2.4 of Phinney 1992.
+        The default v_o and R_o values are from Reid et al 2014.
+    """
+    A_sun = v_o*v_o / (C/1000.0 * R_o*KMPERKPC)
+    d = D/R_o
+    cbcl = Num.cos(b*DEGTORAD) * Num.cos(l*DEGTORAD)
+    return -A_sun * (cbcl + (d - cbcl) / (1.0 + d*d - 2.0*d*cbcl))
+
+def galactic_accel(l, b, D, v_o=240.0, R_o = 8.34):
+    """
+    galactic_accel(l, b, D, v_o=240.0, R_o = 8.34):
+        Return the approximate projected acceleration/c (in s^-1)
+        (a_p - a_ssb) dot n / c, where a_p and a_ssb are acceleration
+        vectors, and n is the los vector.  This assumes v_o = 220 km/s
+        circular velocity and R_o = 8 kpc to the center of Galaxy.  l and
+        b are the galactic longitude and latitude (in deg) respectively,
+        and D is the distance in kpc.  This is eqn 5 of Nice & Taylor 1995.
+        The default v_o and R_o values are from Reid et al 2014.
+    """
+    A_sun = v_o*v_o / (C/1000.0 * R_o*KMPERKPC)
+    cb = Num.cos(b*DEGTORAD)
+    cl = Num.cos(l*DEGTORAD)
+    sl = Num.sin(l*DEGTORAD)
+    beta = D/R_o * cb - cl
+    return -A_sun * cb * (cl + beta / (sl**2 + beta**2))
+
+def gal_z_accel(l, b, D):
+    """
+    gal_z_accel(l, b, D):
+        Return the approximate projected acceleration/c (in s^-1)
+        (a_p - a_ssb) dot n / c, where a_p and a_ssb are acceleration
+        vectors, and n is the los vector, caused by the acceleration
+        of the pulsar towards the plane of the galaxy.  l and b are
+        the galactic longitude and latitude (in deg) respectively, and D
+        is the distance in kpc.  This is eqn 3+4 of Nice & Taylor 1995.
+    """
+    sb = Num.sin(b*DEGTORAD)
+    z = D * sb
+    az = 1.08e-19 * (1.25 * z / Num.sqrt(z**2 + 0.0324) + 0.58 * z)
+    return az * sb
 
 def beam_halfwidth(obs_freq, dish_diam):
     """
@@ -1126,25 +1249,15 @@ def gaussian_profile(N, phase, fwhm):
         Note:  The FWHM of a gaussian is approx 2.35482 sigma
     """
     sigma = fwhm / 2.35482
-    mean = phase % 1.0
-    phsval = Num.arange(N, dtype='d') / float(N)
-    if (mean < 0.5):
-        phsval = Num.where(Num.greater(phsval, mean+0.5),
-                           phsval-1.0, phsval)
-    else:
-        phsval = Num.where(Num.less(phsval, mean-0.5),
-                           phsval+1.0, phsval)
-    try:
-        zs = (phsval-mean)/sigma
-        okzinds = Num.compress(Num.fabs(zs)<20.0, Num.arange(N))
-        okzs = Num.take(zs, okzinds)
-        retval = Num.zeros(N, 'd')
-        Num.put(retval, okzinds, Num.exp(-0.5*(okzs)**2.0)/(sigma*Num.sqrt(2*PI)))
-        return retval
-    except OverflowError:
-        print "Problem in gaussian prof:  mean = %f  sigma = %f" % \
-              (mean, sigma)
-        return Num.zeros(N, 'd')
+    mean = phase % 1.0 # Ensures between 0-1
+    phss = Num.arange(N, dtype=Num.float64) / N - mean
+    # Following two lines allow the Gaussian to wrap in phase
+    phss[phss > 0.5] -= 1.0
+    phss[phss < -0.5] += 1.0
+    zs = Num.fabs(phss) / sigma
+    # The following avoids overflow by truncating the Gaussian at 20 sigma
+    return Num.where(zs<20.0, Num.exp(-0.5 * zs**2.0) / \
+                     (sigma * Num.sqrt(2*Num.pi)), 0.0)
 
 def gauss_profile_params(profile, output=0):
     """
@@ -1588,7 +1701,7 @@ def p_to_f(p, pd, pdd=None):
    """
    f = 1.0 / p
    fd = -pd / (p * p)
-   if (pdd==None):
+   if (pdd is None):
        return [f, fd]
    else:
        if (pdd==0.0):
@@ -1603,7 +1716,7 @@ def pferrs(porf, porferr, pdorfd=None, pdorfderr=None):
        Calculate the period or frequency errors and
        the pdot or fdot errors from the opposite one.
     """
-    if (pdorfd==None):
+    if (pdorfd is None):
         return [1.0 / porf, porferr / porf**2.0]
     else:
         forperr = porferr / porf**2.0

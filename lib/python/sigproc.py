@@ -1,15 +1,22 @@
 #!/usr/bin/env python
-import os, struct, sys, math
+import os
+import struct
+import sys
+import math
+import warnings
 from psr_constants import ARCSECTORAD
 
-telescope_ids = {"Fake": 0, "Arecibo": 1, "Ooty": 2, "Nancay": 3,
-                 "Parkes": 4, "Jodrell": 5, "GBT": 6, "GMRT": 7,
-                 "Effelsberg": 8}
+telescope_ids = {"Fake": 0, "Arecibo": 1, "ARECIBO 305m": 1, 
+                 "Ooty": 2, "Nancay": 3, "Parkes": 4, "Jodrell": 5,
+                 "GBT": 6, "GMRT": 7, "Effelsberg": 8, "ATA": 9,
+                 "SRT": 10, "LOFAR": 11, "VLA": 12, "CHIME": 20,
+                 "FAST": 21, "MeerKAT": 64, "KAT-7": 65}
 ids_to_telescope = dict(zip(telescope_ids.values(), telescope_ids.keys()))
 
-machine_ids = {"FAKE": 0, "PSPM": 1, "Wapp": 2,"AOFTM": 3,
-               "BCPM1": 4, "OOTY": 5, "SCAMP": 6, 
-               "GBT Pulsar Spigot": 7, "SPIGOT": 7}
+machine_ids = {"FAKE": 0, "PSPM": 1, "Wapp": 2, "WAPP": 2, "AOFTM": 3,
+               "BCPM1": 4, "BPP": 4, "OOTY": 5, "SCAMP": 6,
+               "GBT Pulsar Spigot": 7, "SPIGOT": 7, "BG/P": 11,
+               "PDEV": 12, "CHIME+PSR": 20, "KAT": 64, "KAT-DC2": 65}
 ids_to_machine = dict(zip(machine_ids.values(), machine_ids.keys()))
 
 header_params = {
@@ -40,6 +47,8 @@ header_params = {
     "nifs": 'i', 
     "refdm": 'd',  
     "period": 'd',  
+    "npuls": 'q',
+    "nbins": 'i', 
     "HEADER_END": 'flag'}
 
 def dec2radians(src_dej):
@@ -74,6 +83,12 @@ def read_intval(filfile, stdout=False):
         print "  int value = '%d'"%intval
     return intval
 
+def read_longintval(filfile, stdout=False):
+    longintval = struct.unpack('q', filfile.read(8))[0]
+    if stdout:
+        print "  long int value = '%d'"%longintval
+    return longintval
+
 def read_string(filfile, stdout=False):
     strlen = struct.unpack('i', filfile.read(4))[0]
     strval = filfile.read(strlen)
@@ -93,6 +108,8 @@ def read_hdr_val(filfile, stdout=False):
         return paramname, read_doubleval(filfile, stdout)
     elif header_params[paramname] == 'i':
         return paramname, read_intval(filfile, stdout)
+    elif header_params[paramname] == 'q':
+        return paramname, read_longintval(filfile, stdout)
     elif header_params[paramname] == 'str':
         return paramname, read_string(filfile, stdout)
     elif header_params[paramname] == 'flag':
@@ -120,7 +137,7 @@ def addto_hdr(paramname, value):
     elif header_params[paramname] == 'flag':
         return prep_string(paramname)
     else:
-        print "Warning:  key '%s' is unknown!" % paramname
+        warnings.warning("key '%s' is unknown!" % paramname)
     return hdr
 
 def read_header(infile):

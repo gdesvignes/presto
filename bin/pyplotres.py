@@ -87,14 +87,14 @@ class TempoResults:
         tempolisfile = open("tempo.lis")
         intimfn, inparfn, outparfn = None, None, None
         for line in tempolisfile:
-            match = inputfiles_re.search(line)
-            if match:
-                intimfn = match.group(1).strip()
-                inparfn = match.group(2).strip()
-            else:
-                match = outputfile_re.search(line)
-                if match:
-                    outparfn = "%s.par" % match.group(1).strip()
+            if line[:15]=="Input data from":
+                sline = line.split()
+                intimfn = sline[3][:-1] # strip the comma
+                intimbase = os.path.splitext(intimfn)[0]
+                inparfn = intimbase+".par" if sline[6]=='def' else sline[6]
+                if inparfn[-1]==".": inparfn = inparfn[:-1]
+            elif line[:15]=="Assumed paramet":
+                outparfn = line.split()[-1]+".par"
             if (intimfn != None) and (inparfn != None) and (outparfn != None):
                 # Found what we're looking for no need to continue parsing the file
                 break
@@ -309,6 +309,9 @@ def plot_data(tempo_results, xkey, ykey, postfit=True, prefit=False, \
                 handle = plt.errorbar(xdata, ydata, yerr=yerr, fmt='.', \
                                       label=freq_label, picker=5,
                                       c=colors[len(tempo_results.freqbands)][ii])
+                # Label isn't being set as expected. Use the following
+                # as a kludgey work-around.
+                handle[0].set_label(freq_label)
                 if subplot == 1:
                     handles.append(handle[0])
                     labels.append(freq_label)

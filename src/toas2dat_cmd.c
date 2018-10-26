@@ -24,7 +24,7 @@ char *Program;
 static Cmdline cmd = {
   /***** -n: The number of bins in the output time series */
   /* numoutP = */ 0,
-  /* numout = */ (int)0,
+  /* numout = */ (long)0,
   /* numoutC = */ 0,
   /***** -dt: Time interval in seconds for output time bins */
   /* dtP = */ 0,
@@ -763,7 +763,7 @@ showOptionValues(void)
     if( !cmd.numoutC ) {
       printf("  no values\n");
     } else {
-      printf("  value = `%d'\n", cmd.numout);
+      printf("  value = `%ld'\n", cmd.numout);
     }
   }
 
@@ -841,7 +841,7 @@ usage(void)
   fprintf(stderr,"%s","   -n numout -dt dt [-t0 t0] -o outfile [-text] [-float] [-sec] [--] file\n");
   fprintf(stderr,"%s","      Converts TOAs into a binned time series.\n");
   fprintf(stderr,"%s","        -n: The number of bins in the output time series\n");
-  fprintf(stderr,"%s","            1 int value between 0 and oo\n");
+  fprintf(stderr,"%s","            1 long value between 0 and oo\n");
   fprintf(stderr,"%s","       -dt: Time interval in seconds for output time bins\n");
   fprintf(stderr,"%s","            1 double value between 0 and oo\n");
   fprintf(stderr,"%s","       -t0: Time for the start of bin 0 (same units as the TOAs)\n");
@@ -853,7 +853,7 @@ usage(void)
   fprintf(stderr,"%s","      -sec: TOA unit is seconds (default is days)\n");
   fprintf(stderr,"%s","      file: Input TOA file name\n");
   fprintf(stderr,"%s","            1 value\n");
-  fprintf(stderr,"%s","  version: 12Mar10\n");
+  fprintf(stderr,"%s","  version: 26Sep17\n");
   fprintf(stderr,"%s","  ");
   exit(EXIT_FAILURE);
 }
@@ -875,9 +875,9 @@ parseCmdline(int argc, char **argv)
     if( 0==strcmp("-n", argv[i]) ) {
       int keep = i;
       cmd.numoutP = 1;
-      i = getIntOpt(argc, argv, i, &cmd.numout, 1);
+      i = getLongOpt(argc, argv, i, &cmd.numout, 1);
       cmd.numoutC = i-keep;
-      checkIntHigher("-n", &cmd.numout, cmd.numoutC, 0);
+      checkLongHigher("-n", &cmd.numout, cmd.numoutC, 0);
       continue;
     }
 

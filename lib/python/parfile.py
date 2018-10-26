@@ -6,6 +6,9 @@ try:
     slalib = True
 except ImportError:
     slalib = False
+
+# MJD of the J2000.0 epoch
+J2000 = 51544.5
     
 #
 # The following are the parameters that are accepted in a
@@ -45,7 +48,7 @@ float_keys = ["PEPOCH", "POSEPOCH", "DM", "START", "FINISH", "NTOA",
               "TRES", "TZRMJD", "TZRFRQ", "TZRSITE", "NITS",
               "A1", "XDOT", "E", "ECC", "EDOT", "T0", "PB", "PBDOT", "OM", "OMDOT",
               "EPS1", "EPS2", "EPS1DOT", "EPS2DOT", "TASC", "LAMBDA", "BETA",
-              "RA_RAD", "DEC_RAD", "GAMMA", "SINI", "M2", "MTOT",
+              "RA_RAD", "DEC_RAD", "GAMMA", "SINI", "M2", "MTOT", "XPBDOT",
               "ELAT", "ELONG", "PMLAMBDA", "PMBETA", "PX",
               "PMRA", "PMDEC", "PB_2", "A1_2", "E_2", "T0_2", "OM_2"]
 floatn_keys = ["F", "P", "FB", "FD", "DMX_", "DMXEP_", "DMXR1_",
@@ -108,12 +111,9 @@ class psr_par:
             setattr(self, 'ELAT', self.BETA)
             setattr(self, 'ELONG', self.LAMBDA)
         if (slalib and hasattr(self, 'ELAT') and hasattr(self, 'ELONG')):
-            if hasattr(self, 'POSEPOCH'):
-                epoch = self.POSEPOCH
-            else:
-                epoch = self.PEPOCH
+            # TEMPO's ecliptic coords are always based on J2000 epoch
             ra_rad, dec_rad = sla_ecleq(self.ELONG*pu.DEGTORAD,
-                                        self.ELAT*pu.DEGTORAD, epoch)
+                                        self.ELAT*pu.DEGTORAD, J2000)
             rstr = pu.coord_to_string(*pu.rad_to_hms(ra_rad))
             dstr = pu.coord_to_string(*pu.rad_to_dms(dec_rad))
             setattr(self, 'RAJ', rstr)
@@ -129,11 +129,8 @@ class psr_par:
             setattr(self, 'GLAT', b*pu.RADTODEG)
         # Compute the Ecliptic coords
         if (slalib and hasattr(self, 'RA_RAD') and hasattr(self, 'DEC_RAD')):
-            if hasattr(self, 'POSEPOCH'):
-                epoch = self.POSEPOCH
-            else:
-                epoch = self.PEPOCH
-            elon, elat = sla_eqecl(self.RA_RAD, self.DEC_RAD, epoch)
+            # TEMPO's ecliptic coords are always based on J2000 epoch
+            elon, elat = sla_eqecl(self.RA_RAD, self.DEC_RAD, J2000)
             setattr(self, 'ELONG', elon*pu.RADTODEG)
             setattr(self, 'ELAT', elat*pu.RADTODEG)
         if hasattr(self, 'P'):
@@ -181,6 +178,14 @@ class psr_par:
             setattr(self, 'E', 0.0)
         if hasattr(self, 'T0') and not hasattr(self, 'TASC'):
             setattr(self, 'TASC', self.T0 - self.PB * self.OM/360.0)
+        if hasattr(self, 'E') and not hasattr(self, 'ECC'):
+            setattr(self, 'ECC', self.E)
+            if not hasattr(self, 'EPS1'):
+                if hasattr(self, 'E_ERR'):
+                    setattr(self, 'ECC_ERR', self.E_ERR)
+        if hasattr(self, 'ECC') and not hasattr(self, 'E'):
+            setattr(self, 'E', self.ECC)
+            setattr(self, 'E_ERR', self.ECC_ERR)
         pf.close()
     def __str__(self):
         out = ""

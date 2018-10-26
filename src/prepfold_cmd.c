@@ -30,14 +30,6 @@ static Cmdline cmd = {
   /* outfileP = */ 0,
   /* outfile = */ (char*)0,
   /* outfileC = */ 0,
-  /***** -pkmb: Raw data in Parkes Multibeam format */
-  /* pkmbP = */ 0,
-  /***** -gmrt: Raw data in GMRT Phased Array format */
-  /* gmrtP = */ 0,
-  /***** -bcpm: Raw data in Berkeley-Caltech Pulsar Machine (BPP) format */
-  /* bcpmP = */ 0,
-  /***** -spigot: Raw data in Caltech-NRAO Spigot Card format */
-  /* spigotP = */ 0,
   /***** -filterbank: Raw data in SIGPROC filterbank format */
   /* filterbankP = */ 0,
   /***** -psrfits: Raw data in PSRFITS format */
@@ -248,6 +240,10 @@ static Cmdline cmd = {
   /* maskfileP = */ 0,
   /* maskfile = */ (char*)0,
   /* maskfileC = */ 0,
+  /***** -ignorechan: Comma separated string (no spaces!) of channels to ignore (or file containing such string).  Ranges are specified by min:max[:step] */
+  /* ignorechanstrP = */ 0,
+  /* ignorechanstr = */ (char*)0,
+  /* ignorechanstrC = */ 0,
   /***** -events: Use a event file instead of a time series (.dat) file */
   /* eventsP = */ 0,
   /***** -days: Events are in days since the EPOCH in the '.inf' file (default is seconds) */
@@ -987,34 +983,6 @@ showOptionValues(void)
     }
   }
 
-  /***** -pkmb: Raw data in Parkes Multibeam format */
-  if( !cmd.pkmbP ) {
-    printf("-pkmb not found.\n");
-  } else {
-    printf("-pkmb found:\n");
-  }
-
-  /***** -gmrt: Raw data in GMRT Phased Array format */
-  if( !cmd.gmrtP ) {
-    printf("-gmrt not found.\n");
-  } else {
-    printf("-gmrt found:\n");
-  }
-
-  /***** -bcpm: Raw data in Berkeley-Caltech Pulsar Machine (BPP) format */
-  if( !cmd.bcpmP ) {
-    printf("-bcpm not found.\n");
-  } else {
-    printf("-bcpm found:\n");
-  }
-
-  /***** -spigot: Raw data in Caltech-NRAO Spigot Card format */
-  if( !cmd.spigotP ) {
-    printf("-spigot not found.\n");
-  } else {
-    printf("-spigot found:\n");
-  }
-
   /***** -filterbank: Raw data in SIGPROC filterbank format */
   if( !cmd.filterbankP ) {
     printf("-filterbank not found.\n");
@@ -1674,6 +1642,18 @@ showOptionValues(void)
     }
   }
 
+  /***** -ignorechan: Comma separated string (no spaces!) of channels to ignore (or file containing such string).  Ranges are specified by min:max[:step] */
+  if( !cmd.ignorechanstrP ) {
+    printf("-ignorechan not found.\n");
+  } else {
+    printf("-ignorechan found:\n");
+    if( !cmd.ignorechanstrC ) {
+      printf("  no values\n");
+    } else {
+      printf("  value = `%s'\n", cmd.ignorechanstr);
+    }
+  }
+
   /***** -events: Use a event file instead of a time series (.dat) file */
   if( !cmd.eventsP ) {
     printf("-events not found.\n");
@@ -1728,17 +1708,13 @@ showOptionValues(void)
 void
 usage(void)
 {
-  fprintf(stderr,"%s","   [-ncpus ncpus] [-o outfile] [-pkmb] [-gmrt] [-bcpm] [-spigot] [-filterbank] [-psrfits] [-noweights] [-noscales] [-nooffsets] [-wapp] [-window] [-topo] [-invert] [-zerodm] [-absphase] [-barypolycos] [-numwapps numwapps] [-if ifs] [-clip clip] [-noclip] [-noxwin] [-runavg] [-fine] [-coarse] [-slow] [-searchpdd] [-searchfdd] [-nosearch] [-nopsearch] [-nopdsearch] [-nodmsearch] [-scaleparts] [-allgrey] [-fixchi] [-justprofs] [-dm dm] [-n proflen] [-nsub nsub] [-npart npart] [-pstep pstep] [-pdstep pdstep] [-dmstep dmstep] [-npfact npfact] [-ndmfact ndmfact] [-p p] [-pd pd] [-pdd pdd] [-f f] [-fd fd] [-fdd fdd] [-pfact pfact] [-ffact ffact] [-phs phs] [-start startT] [-end endT] [-psr psrname] [-par parname] [-polycos polycofile] [-timing timing] [-rzwcand rzwcand] [-rzwfile rzwfile] [-accelcand accelcand] [-accelfile accelfile] [-bin] [-pb pb] [-x asinic] [-e e] [-To To] [-w w] [-wdot wdot] [-mask maskfile] [-events] [-days] [-mjds] [-double] [-offset offset] [--] infile ...\n");
+  fprintf(stderr,"%s","   [-ncpus ncpus] [-o outfile] [-filterbank] [-psrfits] [-noweights] [-noscales] [-nooffsets] [-wapp] [-window] [-topo] [-invert] [-zerodm] [-absphase] [-barypolycos] [-numwapps numwapps] [-if ifs] [-clip clip] [-noclip] [-noxwin] [-runavg] [-fine] [-coarse] [-slow] [-searchpdd] [-searchfdd] [-nosearch] [-nopsearch] [-nopdsearch] [-nodmsearch] [-scaleparts] [-allgrey] [-fixchi] [-justprofs] [-dm dm] [-n proflen] [-nsub nsub] [-npart npart] [-pstep pstep] [-pdstep pdstep] [-dmstep dmstep] [-npfact npfact] [-ndmfact ndmfact] [-p p] [-pd pd] [-pdd pdd] [-f f] [-fd fd] [-fdd fdd] [-pfact pfact] [-ffact ffact] [-phs phs] [-start startT] [-end endT] [-psr psrname] [-par parname] [-polycos polycofile] [-timing timing] [-rzwcand rzwcand] [-rzwfile rzwfile] [-accelcand accelcand] [-accelfile accelfile] [-bin] [-pb pb] [-x asinic] [-e e] [-To To] [-w w] [-wdot wdot] [-mask maskfile] [-ignorechan ignorechanstr] [-events] [-days] [-mjds] [-double] [-offset offset] [--] infile ...\n");
   fprintf(stderr,"%s","      Prepares (if required) and folds raw radio data, standard time series, or events.\n");
   fprintf(stderr,"%s","          -ncpus: Number of processors to use with OpenMP\n");
   fprintf(stderr,"%s","                  1 int value between 1 and oo\n");
   fprintf(stderr,"%s","                  default: `1'\n");
   fprintf(stderr,"%s","              -o: Root of the output file names\n");
   fprintf(stderr,"%s","                  1 char* value\n");
-  fprintf(stderr,"%s","           -pkmb: Raw data in Parkes Multibeam format\n");
-  fprintf(stderr,"%s","           -gmrt: Raw data in GMRT Phased Array format\n");
-  fprintf(stderr,"%s","           -bcpm: Raw data in Berkeley-Caltech Pulsar Machine (BPP) format\n");
-  fprintf(stderr,"%s","         -spigot: Raw data in Caltech-NRAO Spigot Card format\n");
   fprintf(stderr,"%s","     -filterbank: Raw data in SIGPROC filterbank format\n");
   fprintf(stderr,"%s","        -psrfits: Raw data in PSRFITS format\n");
   fprintf(stderr,"%s","      -noweights: Do not apply PSRFITS weights\n");
@@ -1864,6 +1840,8 @@ usage(void)
   fprintf(stderr,"%s","                  default: `0'\n");
   fprintf(stderr,"%s","           -mask: File containing masking information to use\n");
   fprintf(stderr,"%s","                  1 char* value\n");
+  fprintf(stderr,"%s","     -ignorechan: Comma separated string (no spaces!) of channels to ignore (or file containing such string).  Ranges are specified by min:max[:step]\n");
+  fprintf(stderr,"%s","                  1 char* value\n");
   fprintf(stderr,"%s","         -events: Use a event file instead of a time series (.dat) file\n");
   fprintf(stderr,"%s","           -days: Events are in days since the EPOCH in the '.inf' file (default is seconds)\n");
   fprintf(stderr,"%s","           -mjds: Events are in MJDs\n");
@@ -1873,7 +1851,7 @@ usage(void)
   fprintf(stderr,"%s","                  default: `0'\n");
   fprintf(stderr,"%s","          infile: Input data file name.  If the data is not in a regognized raw data format, it should be a file containing a time series of single-precision floats or short ints.  In this case a '.inf' file with the same root filename must also exist (Note that this means that the input data file must have a suffix that starts with a period)\n");
   fprintf(stderr,"%s","                  1...16384 values\n");
-  fprintf(stderr,"%s","  version: 21Apr15\n");
+  fprintf(stderr,"%s","  version: 28Jun17\n");
   fprintf(stderr,"%s","  ");
   exit(EXIT_FAILURE);
 }
@@ -1905,26 +1883,6 @@ parseCmdline(int argc, char **argv)
       cmd.outfileP = 1;
       i = getStringOpt(argc, argv, i, &cmd.outfile, 1);
       cmd.outfileC = i-keep;
-      continue;
-    }
-
-    if( 0==strcmp("-pkmb", argv[i]) ) {
-      cmd.pkmbP = 1;
-      continue;
-    }
-
-    if( 0==strcmp("-gmrt", argv[i]) ) {
-      cmd.gmrtP = 1;
-      continue;
-    }
-
-    if( 0==strcmp("-bcpm", argv[i]) ) {
-      cmd.bcpmP = 1;
-      continue;
-    }
-
-    if( 0==strcmp("-spigot", argv[i]) ) {
-      cmd.spigotP = 1;
       continue;
     }
 
@@ -2416,6 +2374,14 @@ parseCmdline(int argc, char **argv)
       cmd.maskfileP = 1;
       i = getStringOpt(argc, argv, i, &cmd.maskfile, 1);
       cmd.maskfileC = i-keep;
+      continue;
+    }
+
+    if( 0==strcmp("-ignorechan", argv[i]) ) {
+      int keep = i;
+      cmd.ignorechanstrP = 1;
+      i = getStringOpt(argc, argv, i, &cmd.ignorechanstr, 1);
+      cmd.ignorechanstrC = i-keep;
       continue;
     }
 
